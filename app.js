@@ -40,6 +40,19 @@ app.get("/profile", isLoggedIn, async (req, resp) => {
   resp.render("profile", {user});
 });
 
+app.get("/edit/:id", isLoggedIn, async (req, resp) => {
+  let post = await postModel.findOne({ _id: req.params.id }).populate('user');
+  resp.render('edit', {post})
+
+});
+
+app.post("/update/:id", isLoggedIn, async (req, resp) => {
+  let post = await postModel.findOneAndUpdate({ _id: req.params.id }, {content: req.body.content});
+  resp.redirect('/profile');
+  
+});
+
+
 app.get("/logout", (req, resp) => {
   resp.cookie("token", "");
   resp.redirect("/login");
