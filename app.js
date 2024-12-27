@@ -20,10 +20,30 @@ app.get("/login", (req, resp) => {
   resp.render("login");
 });
 
+app.post("/post", isLoggedIn, async (req, resp) => {
+  let user = await userModel.findOne({ email: req.user.email });
+  console.log("scfsdvs");
+  let post =  await postModel.create({
+    user: user._id,
+    content: req.body.content,
+  })
+
+  user.post.push(post._id);
+  await user.save();
+
+  resp.redirect("/profile");
+});
+
+app.get("/profile", isLoggedIn, async (req, resp) => {
+  let user = await userModel.findOne({ email: req.user.email }).populate("post");
+  console.log(user);
+  resp.render("profile", {user});
+});
+
 app.get("/logout", (req, resp) => {
-    resp.cookie("tokwn", "");
-    resp.redirect("/login");
-  });
+  resp.cookie("token", "");
+  resp.redirect("/login");
+});
 
 app.post("/register", async (req, resp) => {
   let { username, name, password, age, email } = req.body;
@@ -56,9 +76,21 @@ app.post("/login", async (req, resp) => {
   if (!user) return resp.status(500).send("Something Went Wrong");
 
   bcrypt.compare(password, user.password, (err, result) => {
-    if (result) return resp.status(200).send("Logged in Successfully");
-    else return resp.redirect("/login");
+    if (result) {
+      let token = jwt.sign({ email: email, userid: user._id }, "shhhh");
+      resp.cookie("token", token);
+      resp.status(200).redirect("/profile");
+    } else resp.redirect("/login");
   });
 });
+
+function isLoggedIn(req, resp, next) {
+  if (req.cookies.token === "") resp.redirect("/login");
+  else {
+    let data = jwt.verify(req.cookies.token, "shhhh");
+    req.user = data;
+    next();
+  }
+}
 
 app.listen(3000);
